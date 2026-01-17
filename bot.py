@@ -1,6 +1,6 @@
 import asyncio
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import (
@@ -10,20 +10,18 @@ from aiogram.types import (
     CallbackQuery
 )
 from aiogram.enums import ChatMemberStatus
-import os
 
-TOKEN = os.getenv("TOKEN")
 # ================== SOZLAMALAR ==================
 TOKEN = "8150749371:AAFtQJetCVxiknxoHBEGz7fEElVRMr3588A"
-SPONSOR_CHANNEL = "@photos_just"     # homiy kanal (PUBLIC)
-PRIVATE_STORAGE = -1003585163421    # maxfiy kanal ID
+SPONSOR_CHANNEL = "@photos_just"      # PUBLIC homiy kanal
+PRIVATE_STORAGE = -1003585163421     # maxfiy kanal ID
 
 # ================== BOT ==================
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 # ================== DATABASE ==================
-db = sqlite3.connect("videos.db")
+db = sqlite3.connect("videos.db", check_same_thread=False)
 cur = db.cursor()
 
 cur.execute("""
@@ -46,13 +44,11 @@ async def check_sub(user_id: int) -> bool:
             chat_id=SPONSOR_CHANNEL,
             user_id=user_id
         )
-
         return member.status not in (
             ChatMemberStatus.LEFT,
             ChatMemberStatus.KICKED
         )
-    except Exception as e:
-        print("SUB CHECK ERROR:", e)
+    except:
         return False
 
 # ================== TUGMA ==================
@@ -110,7 +106,7 @@ async def start(message: Message):
 # ================== KOD QABUL QILISH ==================
 @dp.message(F.text.regexp(r"^\d{3}$"))
 async def code_handler(message: Message):
-    code = message.text.strip()
+    code = message.text
     user_id = message.from_user.id
 
     user_last_code[user_id] = code
@@ -124,9 +120,11 @@ async def code_handler(message: Message):
 
     await send_video_by_code(message.chat.id, code)
 
-# ================== OBUNANI TEKSHIRISH TUGMASI ==================
+# ================== OBUNANI TEKSHIRISH ==================
 @dp.callback_query(F.data == "check_sub")
 async def check_sub_callback(callback: CallbackQuery):
+    await callback.answer()
+
     user_id = callback.from_user.id
 
     if not await check_sub(user_id):
@@ -137,7 +135,6 @@ async def check_sub_callback(callback: CallbackQuery):
         return
 
     code = user_last_code.get(user_id)
-
     if not code:
         await callback.message.answer(
             "❗ Kod topilmadi, iltimos qayta yuboring."
@@ -149,20 +146,15 @@ async def check_sub_callback(callback: CallbackQuery):
 # ================== ADMIN: VIDEO QO‘SHISH ==================
 @dp.channel_post(F.video)
 async def add_video(channel_post: Message):
-
-
     if channel_post.chat.id != PRIVATE_STORAGE:
-        print("NOTO‘G‘RI KANAL")
         return
 
     if not channel_post.caption:
-        print("CAPTION YO‘Q")
         return
 
     code = channel_post.caption.strip()
 
     if not code.isdigit() or len(code) != 3:
-        print("KOD NOTO‘G‘RI:", code)
         return
 
     cur.execute(
@@ -171,19 +163,24 @@ async def add_video(channel_post: Message):
     )
     db.commit()
 
-   
-
     await bot.send_message(
         channel_post.chat.id,
         f"✅ Video saqlandi | Kod: {code}"
     )
 
+# ================== 24 SOATDAN KEYIN O‘CHIRISH ==================
+async def auto_cleanup():
+    while True:
+        limit = (datetime.now() - timedelta(hours=24)).isoformat()
+        cur.execute("DELETE FROM videos WHERE created < ?", (limit,))
+        db.commit()
+        await asyncio.sleep(3600)
 
 # ================== RUN ==================
 async def main():
+    asyncio.create_task(auto_cleanup())
     print("🤖 Bot ishga tushdi")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
-
