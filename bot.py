@@ -1,5 +1,6 @@
 import asyncio
 import sqlite3
+import os
 from datetime import datetime, timedelta
 
 from aiogram import Bot, Dispatcher, F
@@ -12,7 +13,9 @@ from aiogram.types import (
 from aiogram.enums import ChatMemberStatus
 
 # ================== SOZLAMALAR ==================
-TOKEN = "8150749371:AAFtQJetCVxiknxoHBEGz7fEElVRMr3588A"
+
+TOKEN = os.getenv("TOKEN")
+
 SPONSOR_CHANNEL = "@photos_just"      # PUBLIC homiy kanal
 PRIVATE_STORAGE = -1003585163421     # maxfiy kanal ID
 
@@ -184,3 +187,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
