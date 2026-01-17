@@ -10,7 +10,9 @@ from aiogram.types import (
     CallbackQuery
 )
 from aiogram.enums import ChatMemberStatus
+import os
 
+TOKEN = os.getenv("TOKEN")
 # ================== SOZLAMALAR ==================
 TOKEN = "8150749371:AAFtQJetCVxiknxoHBEGz7fEElVRMr3588A"
 SPONSOR_CHANNEL = "@photos_just"     # homiy kanal (PUBLIC)
@@ -184,3 +186,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
